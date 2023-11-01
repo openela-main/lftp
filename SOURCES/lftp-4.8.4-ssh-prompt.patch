@@ -1,0 +1,59 @@
+From 0ad0732b8fbacd3519b4e3ecf8c394681b314672 Mon Sep 17 00:00:00 2001
+From: "Alexander V. Lukyanov" <lavv17f@gmail.com>
+Date: Thu, 5 Dec 2019 21:34:11 +0300
+Subject: [PATCH] SSH_Access: fixed yes/no/[fingerprint] recognition (fix #547,
+ fix #525)
+
+---
+ src/SSH_Access.cc | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/src/SSH_Access.cc b/src/SSH_Access.cc
+index 97683a3f..adf0c196 100644
+--- a/src/SSH_Access.cc
++++ b/src/SSH_Access.cc
+@@ -20,6 +20,8 @@
+ #include <config.h>
+ #include "SSH_Access.h"
+ #include "misc.h"
++#include <algorithm>
++#include "ascii_ctype.h"
+ 
+ void SSH_Access::MakePtyBuffers()
+ {
+@@ -70,6 +70,26 @@ static bool IsPasswordPrompt(const char *b,const char *e)
+    return (e-b>=len && !strncasecmp(b,suffix,len));
+ }
+ 
++struct nocase_eq
++{
++   inline bool operator() (char lhs, char rhs) const
++   {
++      return c_tolower(lhs) == c_tolower(rhs);
++   };
++};
++
++static bool contains(char const *begin, char const *end, char const *needle)
++{
++   return std::search(begin, end, needle, needle+strlen(needle), nocase_eq()) != end;
++}
++
++static bool IsConfirmPrompt(const char *b,const char *e)
++{
++   if(b==e)
++      return false;
++   return e[-1]=='?' && contains(b,e,"yes/no");
++}
++
+ int SSH_Access::HandleSSHMessage()
+ {
+    int m=STALL;
+@@ -99,7 +106,7 @@ int SSH_Access::HandleSSHMessage()
+ 	 password_sent++;
+ 	 return m;
+       }
+-      if(ends_with(b,b+s,"(yes/no)?"))
++      if(IsConfirmPrompt(b,b+s))
+       {
+ 	 const char *answer=QueryBool("auto-confirm",hostname)?"yes\n":"no\n";
+ 	 pty_recv_buf->Put(answer);
