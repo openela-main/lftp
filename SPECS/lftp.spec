@@ -1,7 +1,7 @@
 Summary:	A sophisticated file transfer program
 Name:		lftp
 Version:	4.8.4
-Release:	2%{?dist}
+Release:	3%{?dist}
 License:	GPLv3+
 Group:		Applications/Internet
 Source0:	http://lftp.yar.ru/ftp/%{name}-%{version}.tar.xz
@@ -13,6 +13,7 @@ BuildRequires: desktop-file-utils
 
 Patch1:  lftp-4.0.9-date_fmt.patch
 Patch2:  lftp-4.8.4-ssh-prompt.patch
+Patch3:  lftp-4.8.4-re-newed-cert.patch
 
 %description
 LFTP is a sophisticated ftp/http file transfer program. Like bash, it has job
@@ -34,6 +35,7 @@ Utility scripts for use with lftp.
 
 %patch1 -p1 -b .date_fmt
 %patch2 -p1 -b .ssh-prompt
+%patch3 -p1 -b .re-newed-cert
 
 #sed -i.rpath -e '/lftp_cv_openssl/s|-R.*lib||' configure
 sed -i.norpath -e \
@@ -103,6 +105,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Mon Jul 24 2023 Michal Ruprich <mruprich@redhat.com> - 4.8.4-3
+- Resolves: #2182418 - Connection to site fails with certificate verification error
+
 * Tue Apr 28 2020 Michal Ruprich <michalruprich@gmail.com> - 4.8.4-2
 - Resolves: #1793557 - SFTP over LFTP hangs if host key of the remote system doesn't exist
 
