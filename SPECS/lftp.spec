@@ -1,7 +1,7 @@
 Summary:	A sophisticated file transfer program
 Name:		lftp
 Version:	4.8.4
-Release:	4%{?dist}
+Release:	6%{?dist}
 License:	GPLv3+
 Group:		Applications/Internet
 Source0:	http://lftp.yar.ru/ftp/%{name}-%{version}.tar.xz
@@ -107,6 +107,14 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Fri Jul 04 2025 Tomas Korbar <tkorbar@redhat.com> - 4.8.4-6
+- Do not wait for server close-notify on TLS close
+- Resolves: RHEL-99571
+
+* Thu Jun 26 2025 Tomas Korbar <tkorbar@redhat.com> - 4.8.4-5
+- Improve fix for close of TLS connection
+- Resolves: RHEL-99571
+
 * Tue May 06 2025 Tomas Korbar <tkorbar@redhat.com> - 4.8.4-4
 - Ensure proper closing of TLS connection
 - Resolves: RHEL-88955

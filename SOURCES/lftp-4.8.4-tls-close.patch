@@ -1,8 +1,8 @@
-commit 299a194cc86ea81c40d2146dd095dda3954efc81
+commit 4156522476192bd9a90aa747cdb8193ffc3a1f24
 Author: Tomas Korbar <tkorbar@redhat.com>
-Date:   Tue May 6 12:01:10 2025 +0200
+Date:   Fri Jul 4 11:15:42 2025 +0200
 
-    Ensure proper closing of TLS connection
+    Ensure close-notify is sent on end of TLS connection
 
 diff --git a/src/buffer.cc b/src/buffer.cc
 index 9ee6580..e54e20e 100644
@@ -106,7 +106,7 @@ index d3cf7f0..8915066 100644
  #endif
  
 diff --git a/src/lftp_ssl.cc b/src/lftp_ssl.cc
-index 0a0078a..8820b6f 100644
+index 0a0078a..19870da 100644
 --- a/src/lftp_ssl.cc
 +++ b/src/lftp_ssl.cc
 @@ -45,6 +45,7 @@ lftp_ssl_base::lftp_ssl_base(int fd1,handshake_mode_t m,const char *h)
@@ -117,7 +117,7 @@ index 0a0078a..8820b6f 100644
     handshake_mode=m;
     fatal=false;
     cert_error=false;
-@@ -347,10 +348,24 @@ void lftp_ssl_gnutls::load_keys()
+@@ -347,10 +348,30 @@ void lftp_ssl_gnutls::load_keys()
        Log::global->Format(9, "Loaded %d CRLs\n", res);
     gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE, cred);
  }
@@ -134,6 +134,12 @@ index 0a0078a..8820b6f 100644
 +         goodbye_done = true;
 +         return DONE;
 +      } else if (res == GNUTLS_E_AGAIN || res == GNUTLS_E_INTERRUPTED) {
++         /* In ideal world we would not need this if, but windows does not
++          * send close-notify, so do not wait on server close-notify */
++         if (gnutls_record_get_direction(session) == 0) {
++            goodbye_done = true;
++            return DONE;
++         }
 +         return RETRY;
 +      }
 +      fatal=check_fatal(res);
@@ -145,7 +151,7 @@ index 0a0078a..8820b6f 100644
  }
  lftp_ssl_gnutls::~lftp_ssl_gnutls()
  {
-@@ -849,10 +864,23 @@ void lftp_ssl_openssl::load_keys()
+@@ -849,10 +870,23 @@ void lftp_ssl_openssl::load_keys()
        }
     }
  }
