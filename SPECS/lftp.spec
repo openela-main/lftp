@@ -1,7 +1,7 @@
 Summary:	A sophisticated file transfer program
 Name:		lftp
 Version:	4.8.4
-Release:	6%{?dist}
+Release:	7%{?dist}
 License:	GPLv3+
 Group:		Applications/Internet
 Source0:	http://lftp.yar.ru/ftp/%{name}-%{version}.tar.xz
@@ -15,6 +15,7 @@ Patch1:  lftp-4.0.9-date_fmt.patch
 Patch2:  lftp-4.8.4-ssh-prompt.patch
 Patch3:  lftp-4.8.4-re-newed-cert.patch
 Patch4:  lftp-4.8.4-tls-close.patch
+Patch5:  lftp-4.8.4-tls-close-timer.patch
 
 %description
 LFTP is a sophisticated ftp/http file transfer program. Like bash, it has job
@@ -38,6 +39,7 @@ Utility scripts for use with lftp.
 %patch2 -p1 -b .ssh-prompt
 %patch3 -p1 -b .re-newed-cert
 %patch4 -p1 -b .tls-close
+%patch5 -p1 -b .tls-close-timer
 
 #sed -i.rpath -e '/lftp_cv_openssl/s|-R.*lib||' configure
 sed -i.norpath -e \
@@ -107,6 +109,10 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Thu Oct 02 2025 Michal Ruprich <mruprich@redhat.com> - 4.8.4-7
+- Adding a timeout for TLS close
+- Resolves: RHEL-108115 - "cannot seek on data source" in TLS lftp sessions
+
 * Fri Jul 04 2025 Tomas Korbar <tkorbar@redhat.com> - 4.8.4-6
 - Do not wait for server close-notify on TLS close
 - Resolves: RHEL-99571
