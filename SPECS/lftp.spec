@@ -1,7 +1,7 @@
 Summary:	A sophisticated file transfer program
 Name:		lftp
 Version:	4.9.2
-Release:	4%{?dist}
+Release:	7%{?dist}
 License:	GPLv3+
 Source0:	http://lftp.yar.ru/ftp/%{name}-%{version}.tar.xz
 URL:		http://lftp.yar.ru/
@@ -11,6 +11,7 @@ BuildRequires: desktop-file-utils
 BuildRequires: make
 
 Patch1:  lftp-4.0.9-date_fmt.patch
+Patch2:  lftp-4.9.2-tls-close.patch
 
 %description
 LFTP is a sophisticated ftp/http file transfer program. Like bash, it has job
@@ -30,6 +31,7 @@ Utility scripts for use with lftp.
 %setup -q
 
 %patch1 -p1 -b .date_fmt
+%patch2 -p1 -b .tls-close
 
 #sed -i.rpath -e '/lftp_cv_openssl/s|-R.*lib||' configure
 sed -i.norpath -e \
@@ -92,6 +94,18 @@ desktop-file-install	\
 
 
 %changelog
+* Thu Jul 03 2025 Tomas Korbar <tkorbar@redhat.com> - 4.9.2-7
+- Do not wait for server close-notify on TLS close
+- Resolves: RHEL-100406
+
+* Thu Jun 26 2025 Tomas Korbar <tkorbar@redhat.com> - 4.9.2-6
+- Improve fix for close of TLS connection
+- Resolves: RHEL-90997
+
+* Tue May 06 2025 Tomas Korbar <tkorbar@redhat.com> - 4.9.2-5
+- Ensure proper closing of TLS connection
+- Resolves: RHEL-90997
+
 * Mon Aug 09 2021 Mohan Boddu <mboddu@redhat.com> - 4.9.2-4
 - Rebuilt for IMA sigs, glibc 2.34, aarch64 flags
   Related: rhbz#1991688
