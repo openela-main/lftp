@@ -1,7 +1,7 @@
 Summary:	A sophisticated file transfer program
 Name:		lftp
 Version:	4.9.2
-Release:	16%{?dist}
+Release:	19%{?dist}
 License:	GPL-3.0-or-later
 Source0:	http://lftp.yar.ru/ftp/%{name}-%{version}.tar.xz
 URL:		http://lftp.yar.ru/
@@ -19,6 +19,7 @@ Patch1:	lftp-4.0.9-date_fmt.patch
 Patch2:	lftp-4.9.2-cdefs.patch
 Patch3:	lftp-4.9.2-gnutls-peers2.patch
 Patch4:	lftp-4.9.2-fedora-c99.patch
+Patch5:	lftp-4.9.2-tls-close.patch
 
 %description
 LFTP is a sophisticated ftp/http file transfer program. Like bash, it has job
@@ -36,6 +37,8 @@ reliability in mind.
 %patch 3 -p1 -b .gnutls-peers2
 
 %patch 4 -p1 -b .fedora-c99
+%patch 5 -p1 -b .tls-close
+
 # Avoid trying to re-run autoconf
 touch -r aclocal.m4 configure m4/needtrio.m4
 
@@ -97,6 +100,18 @@ rm -r $RPM_BUILD_ROOT%{_datadir}/lftp
 %{_datadir}/icons/hicolor/*/apps/*
 
 %changelog
+* Wed Jul 02 2025 Tomas Korbar <tkorbar@redhat.com> - 4.9.2-19
+- Do not wait for server close-notify on TLS close
+- Resolves: RHEL-100407
+
+* Thu Jun 26 2025 Tomas Korbar <tkorbar@redhat.com> - 4.9.2-18
+- Improve fix for RHEL-91005
+- Resolves: RHEL-91005
+
+* Tue May 06 2025 Tomas Korbar <tkorbar@redhat.com> - 4.9.2-17
+- Ensure proper closing of TLS connection
+- Resolves: RHEL-91005
+
 * Tue Oct 29 2024 Troy Dawson <tdawson@redhat.com> - 4.9.2-16
 - Bump release for October 2024 mass rebuild:
   Resolves: RHEL-64018
