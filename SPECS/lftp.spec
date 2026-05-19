@@ -1,7 +1,7 @@
 Summary:	A sophisticated file transfer program
 Name:		lftp
 Version:	4.9.2
-Release:	19%{?dist}
+Release:	20%{?dist}
 License:	GPL-3.0-or-later
 Source0:	http://lftp.yar.ru/ftp/%{name}-%{version}.tar.xz
 URL:		http://lftp.yar.ru/
@@ -20,6 +20,7 @@ Patch2:	lftp-4.9.2-cdefs.patch
 Patch3:	lftp-4.9.2-gnutls-peers2.patch
 Patch4:	lftp-4.9.2-fedora-c99.patch
 Patch5:	lftp-4.9.2-tls-close.patch
+Patch6:	lftp-4.9.2-tls-close-timer.patch
 
 %description
 LFTP is a sophisticated ftp/http file transfer program. Like bash, it has job
@@ -38,6 +39,7 @@ reliability in mind.
 
 %patch 4 -p1 -b .fedora-c99
 %patch 5 -p1 -b .tls-close
+%patch 6 -p1 -b .tlc-close-timer
 
 # Avoid trying to re-run autoconf
 touch -r aclocal.m4 configure m4/needtrio.m4
@@ -100,6 +102,10 @@ rm -r $RPM_BUILD_ROOT%{_datadir}/lftp
 %{_datadir}/icons/hicolor/*/apps/*
 
 %changelog
+* Thu Oct 02 2025 Michal Ruprich <mruprich@redhat.com> - 4.9.2-20
+- Adding a timeout for TLS close
+- Resolves: RHEL-113472 - "cannot seek on data source" in TLS lftp sessions
+
 * Wed Jul 02 2025 Tomas Korbar <tkorbar@redhat.com> - 4.9.2-19
 - Do not wait for server close-notify on TLS close
 - Resolves: RHEL-100407
