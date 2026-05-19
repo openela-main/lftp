@@ -1,0 +1,126 @@
+From 2784cae1d18370acdc13f2bf660c59cd15764d7b Mon Sep 17 00:00:00 2001
+From: Michal Ruprich <mruprich@redhat.com>
+Date: Thu, 25 Sep 2025 17:28:54 +0200
+Subject: [PATCH] Improving TLS communication with a timer
+
+---
+ src/buffer_ssl.h |  1 +
+ src/ftpclass.cc  |  4 +++-
+ src/lftp_ssl.cc  | 20 +++++++++++++++-----
+ src/lftp_ssl.h   |  2 ++
+ src/network.cc   |  5 +++++
+ src/network.h    |  1 +
+ 6 files changed, 27 insertions(+), 6 deletions(-)
+
+diff --git a/src/buffer_ssl.h b/src/buffer_ssl.h
+index 8915066dc..51080b268 100644
+--- a/src/buffer_ssl.h
++++ b/src/buffer_ssl.h
+@@ -21,6 +21,7 @@
+ #define BUFFER_SSL_H
+ 
+ #include "buffer.h"
++#include "Timer.h"
+ 
+ #if USE_SSL
+ #include "lftp_ssl.h"
+diff --git a/src/ftpclass.cc b/src/ftpclass.cc
+index eb5d0186b..0321a1347 100644
+--- a/src/ftpclass.cc
++++ b/src/ftpclass.cc
+@@ -4872,8 +4872,10 @@ void Ftp::Reconfig(const char *name)
+ 
+    if(conn && conn->control_sock!=-1)
+       SetSocketBuffer(conn->control_sock);
+-   if(conn && conn->data_sock!=-1)
++   if(conn && conn->data_sock!=-1) {
+       SetSocketBuffer(conn->data_sock);
++      SetTCPNodelay(conn->data_sock);
++   }
+    if(conn && conn->data_iobuf && rate_limit)
+       rate_limit->SetBufferSize(conn->data_iobuf,max_buf);
+ }
+diff --git a/src/lftp_ssl.cc b/src/lftp_ssl.cc
+index f53edf249..74f3e390e 100644
+--- a/src/lftp_ssl.cc
++++ b/src/lftp_ssl.cc
+@@ -356,16 +356,26 @@ int lftp_ssl_gnutls::shutdown()
+ {
+    int res;
+    if(handshake_done) {
++      // Certain SSL implementations do not reply us with
++      // close_notify that is why we must not wait for it
++      // indefinetely
++      if (ssl_shutdown_timer && ssl_shutdown_timer->Stopped()) {
++         Log::global->Format(9,"TLS Timer ran out, considering channel closed\n");
++         goodbye_done = true;
++         return DONE;
++      }
+       res = gnutls_bye(session,GNUTLS_SHUT_RDWR);
+       if (res == GNUTLS_E_SUCCESS) {
++         if (ssl_shutdown_timer) {
++            ssl_shutdown_timer->Stop();
++            Log::global->Format(9,"Stopping TLS close timer\n");
++         }
+          goodbye_done = true;
+          return DONE;
+       } else if (res == GNUTLS_E_AGAIN || res == GNUTLS_E_INTERRUPTED) {
+-         /* In ideal world we would not need this if, but windows does not
+-          * send close-notify, so do not wait on server close-notify */
+-         if (gnutls_record_get_direction(session) == 0) {
+-            goodbye_done = true;
+-            return DONE;
++         if (!ssl_shutdown_timer) {
++            ssl_shutdown_timer = new Timer(0, 200);
++            Log::global->Format(9,"Starting TLS close timer\n");
+          }
+          return RETRY;
+       }
+diff --git a/src/lftp_ssl.h b/src/lftp_ssl.h
+index 9b2a615fb..c8492e45f 100644
+--- a/src/lftp_ssl.h
++++ b/src/lftp_ssl.h
+@@ -33,6 +33,7 @@
+ 
+ #include "Ref.h"
+ #include "xstring.h"
++#include "Timer.h"
+ 
+ class lftp_ssl_base
+ {
+@@ -92,6 +93,7 @@ class lftp_ssl_gnutls : public lftp_ssl_base
+    static Ref<lftp_ssl_gnutls_instance> instance;
+    gnutls_session_t session;
+    gnutls_certificate_credentials_t cred;
++   Ref<Timer> ssl_shutdown_timer;
+    void verify_certificate_chain(const gnutls_datum_t *cert_chain,int cert_chain_length);
+    void verify_cert2(gnutls_x509_crt_t crt,gnutls_x509_crt_t issuer);
+    void verify_last_cert(gnutls_x509_crt_t crt);
+diff --git a/src/network.cc b/src/network.cc
+index cf26089eb..454e6609a 100644
+--- a/src/network.cc
++++ b/src/network.cc
+@@ -264,6 +264,11 @@ void Networker::SetSocketMaxseg(int sock,int socket_maxseg)
+       ProtoLog::LogError(1,"setsockopt(TCP_MAXSEG,%d): %s",socket_maxseg,strerror(errno));
+ #endif
+ }
++void Networker::SetTCPNodelay(int sock)
++{
++   if(-1==setsockopt(sock, SOL_TCP, TCP_NODELAY, &one, sizeof(one)))
++      ProtoLog::LogError(1,"setsockopt(TCP_NODELAY): %s", strerror(errno));
++}
+ 
+ int Networker::SocketCreateUnbound(int af,int type,int proto,const char *hostname)
+ {
+diff --git a/src/network.h b/src/network.h
+index 10d99227d..0e84edb99 100644
+--- a/src/network.h
++++ b/src/network.h
+@@ -132,6 +132,7 @@ class Networker
+    static int SocketAccept(int fd,sockaddr_u *u,const char *hostname=0);
+    static void SetSocketBuffer(int sock,int socket_buffer);
+    static void SetSocketMaxseg(int sock,int socket_maxseg);
++   static void SetTCPNodelay(int sock);
+    static void SocketBindStd(int s,int af,const char *hostname,int port=0);
+    static int SocketCreate(int af,int type,int proto,const char *hostname);
+    static void SocketTuneTCP(int s,const char *hostname);
